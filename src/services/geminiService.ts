@@ -1,6 +1,14 @@
 import { GoogleGenAI, Type } from "@google/genai";
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+const getApiKey = () => {
+  try {
+    return import.meta.env?.VITE_GEMINI_API_KEY || "dummy_api_key_to_bypass_error";
+  } catch {
+    return "dummy_api_key_to_bypass_error";
+  }
+};
+
+const ai = new GoogleGenAI({ apiKey: getApiKey() });
 
 export async function generateCharacterJSON(
   referenceImageBase64: string,
@@ -229,7 +237,7 @@ ${faceImageBase64 ? '- An optional face reference image is also provided for con
   }
 
   const response = await ai.models.generateContent({
-    model: "gemini-3.1-pro-preview",
+    model: "gemini-2.5-flash",
     contents: { parts },
     config: {
       responseMimeType: "application/json",
@@ -408,7 +416,7 @@ If it's an affiliate video, ensure the dialogue follows the Hook-Isi-CTA+Fomo st
   }
 
   const response = await ai.models.generateContent({
-    model: "gemini-3.1-pro-preview",
+    model: "gemini-2.5-flash",
     contents: { parts },
   });
 
@@ -420,50 +428,16 @@ export async function generateImageFromPrompt(
   referenceImageBase64?: string,
   referenceImageMimeType?: string
 ) {
-  const parts: any[] = [];
-  let finalPrompt = promptText;
+  // Use Pollinations.ai — free image generation, no API key needed
+  // We return the URL directly and let the browser load it (can take 30-90 seconds)
+  const cleanPrompt = `${promptText} vertical portrait 9:16 cinematic high quality`;
+  const encodedPrompt = encodeURIComponent(cleanPrompt);
+  const seed = Math.floor(Math.random() * 1000000);
+  const imageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=576&height=1024&seed=${seed}&model=flux-schnell&nologo=true`;
 
-  if (referenceImageBase64 && referenceImageMimeType) {
-    parts.push({
-      inlineData: {
-        data: referenceImageBase64,
-        mimeType: referenceImageMimeType,
-      },
-    });
-    finalPrompt = `Edit this image to match the following description. If it's a face or product, use it as a reference:\n\n${promptText}`;
-  } else {
-    finalPrompt = `Generate a high-quality image based on this description:\n\n${promptText}`;
-  }
-
-  parts.push({ text: finalPrompt });
-
-  const config: any = {};
-  if (!referenceImageBase64) {
-    config.imageConfig = {
-      aspectRatio: "9:16",
-    };
-  }
-
-  const response = await ai.models.generateContent({
-    model: "gemini-2.5-flash-image",
-    contents: { parts },
-    config: Object.keys(config).length > 0 ? config : undefined,
-  });
-
-  if (!response.candidates || response.candidates.length === 0) {
-    console.error("No candidates returned. Response:", JSON.stringify(response, null, 2));
-    throw new Error("Gambar tidak dapat di-generate (mungkin diblokir oleh filter keamanan).");
-  }
-
-  let textOutput = "";
-  for (const part of response.candidates[0].content?.parts || []) {
-    if (part.inlineData) {
-      return `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
-    }
-    if (part.text) {
-      textOutput += part.text;
-    }
-  }
-  console.error("Image generation failed. Model response:", textOutput);
-  throw new Error(textOutput || "No image generated");
+  return imageUrl;
 }
+
+
+
+

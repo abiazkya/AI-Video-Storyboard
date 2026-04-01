@@ -15,6 +15,7 @@ export default function CharacterCreator() {
   const [genRefImage, setGenRefImage] = useState<File | null>(null);
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
+  const [isImageLoading, setIsImageLoading] = useState(false);
 
   const handleCopy = () => {
     if (result) {
@@ -105,6 +106,7 @@ export default function CharacterCreator() {
       
       const imgUrl = await generateImageFromPrompt(imagePrompt, base64, mimeType);
       setGeneratedImage(imgUrl);
+      setIsImageLoading(true);
     } catch (error: any) {
       console.error(error);
       alert(`Gagal menghasilkan gambar karakter: ${error.message || 'Error tidak diketahui'}`);
@@ -263,13 +265,27 @@ export default function CharacterCreator() {
                 disabled={isGeneratingImage || !imagePrompt}
                 className="bg-indigo-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-indigo-700 disabled:opacity-50 self-end sm:self-auto"
               >
-                {isGeneratingImage ? 'Generating...' : 'Generate Image'}
+                {isGeneratingImage ? 'Generating... (60 detik)' : 'Generate Image'}
               </button>
             </div>
             {generatedImage && (
-              <div className="mt-4 border-t border-gray-100 pt-4">
+              <div className="mt-4 border-t border-gray-100 pt-4 relative">
                 <p className="text-xs font-medium text-gray-500 mb-2">Hasil Gambar:</p>
-                <img src={generatedImage} alt="Generated Character" className="max-w-md w-full rounded-lg shadow-md" />
+                <div className="relative">
+                  {isImageLoading && (
+                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-100 rounded-lg animate-pulse z-10">
+                      <Loader2 className="animate-spin h-8 w-8 text-indigo-600 mb-2" />
+                      <p className="text-sm text-gray-600 font-medium italic animate-pulse">Menunggu server gambar (sabar ya...)</p>
+                    </div>
+                  )}
+                  <img 
+                    src={generatedImage} 
+                    alt="Generated Character" 
+                    className="max-w-md w-full rounded-lg shadow-md"
+                    onLoad={() => setIsImageLoading(false)}
+                    onError={() => setIsImageLoading(false)}
+                  />
+                </div>
               </div>
             )}
           </div>
